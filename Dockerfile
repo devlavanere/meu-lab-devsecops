@@ -1,20 +1,20 @@
 FROM python:3.9-slim
 
-# Instala dependências do sistema para o syslog
+# Instala o rsyslog exigido para os logs do sistema (Requisito Obrigatório)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     rsyslog \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copia o requirements da raiz para o container
+# Copia e instala as dependências atualizadas
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia todo o resto do projeto (incluindo a pasta todo_project)
+# Copia o restante dos arquivos do projeto
 COPY . .
 
 EXPOSE 5000
 
-# Como o run.py está dentro de todo_project, executamos ele a partir dali
+# Inicializa o serviço de syslog e executa o app no caminho correto
 CMD service rsyslog start && python todo_project/run.py
