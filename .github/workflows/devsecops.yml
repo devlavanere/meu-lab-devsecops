@@ -49,7 +49,7 @@ jobs:
             bandit-output.txt
             safety-output.txt
 
-  # ETAPA 5 & 6: Deploy em Stage e DAST (OWASP ZAP Atualizado)
+  # ETAPA 5 & 6: Deploy em Stage e DAST
   dast_security:
     runs-on: ubuntu-latest
     needs: sast_security
@@ -60,14 +60,16 @@ jobs:
       - name: Subir Aplicação no Docker (Ambiente de Stage)
         run: |
           docker build -t task-manager-stage .
-          docker run -d -p 8080:5000 --name app-stage task-manager-stage
-          sleep 5 
+          # Força o Flask a rodar em 0.0.0.0 dentro da rede do runner
+          docker run -d --network="host" --name app-stage task-manager-stage sh -c "rsyslogd && python -m flask --app todo_project/run.py run --host=0.0.0.0 --port=8080"
+          # Dá tempo para o Flask e o rsyslog iniciarem completamente
+          sleep 15
 
       - name: Executar OWASP ZAP (Análise Dinâmica)
         run: |
           mkdir -p /home/runner/work/zap
           chmod 777 /home/runner/work/zap
-          # CORREÇÃO DA IMAGEM: Mudança para o repositório oficial correto do ZAP
+          # O ZAP ataca o localhost:8080 que está exposto no host do runner
           docker run --user root --network="host" -v /home/runner/work/zap:/zap/wrk:rw ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://localhost:8080 -r zap-report.html || true
 
       - name: Salvar Relatório DAST (ZAP)
